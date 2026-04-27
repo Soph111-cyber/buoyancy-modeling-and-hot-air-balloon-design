@@ -4,15 +4,130 @@ import matplotlib.pyplot as plt
 import plotly.graph_objects as go
 from scipy.optimize import brentq
 
-st.set_page_config(page_title="Hot-Air Balloon Simulator", layout="wide")
-
-st.title("🎈 Hot-Air Balloon Buoyancy Simulator")
-
-st.markdown(
-    "This interactive demo models the minimum radius of a spherical hot-air balloon needed to hover."
+# =============================
+# Page Config
+# =============================
+st.set_page_config(
+    page_title="Hot-Air Balloon Buoyancy Simulator",
+    page_icon="🎈",
+    layout="wide"
 )
 
+# =============================
+# Product-style UI CSS
+# =============================
+st.markdown("""
+<style>
+.stApp {
+    background: linear-gradient(135deg, #fff7f2 0%, #f7fbff 45%, #f7f4ff 100%);
+}
+
+.block-container {
+    padding-top: 2rem;
+    padding-bottom: 3rem;
+    max-width: 1250px;
+}
+
+h1 {
+    font-size: 3.1rem !important;
+    font-weight: 850 !important;
+    letter-spacing: -1px;
+    color: #26233a;
+}
+
+h2, h3 {
+    color: #312b4f;
+    font-weight: 780 !important;
+}
+
+div[data-testid="stMetric"] {
+    background: rgba(255, 255, 255, 0.76);
+    border: 1px solid rgba(120, 120, 160, 0.18);
+    padding: 18px;
+    border-radius: 22px;
+    box-shadow: 0 8px 24px rgba(80, 70, 120, 0.08);
+}
+
+div[data-testid="stMetricLabel"] {
+    font-size: 0.95rem;
+    color: #6b647f;
+}
+
+div[data-testid="stMetricValue"] {
+    font-size: 2rem;
+    font-weight: 800;
+    color: #2b2740;
+}
+
+section[data-testid="stSidebar"] {
+    background: linear-gradient(180deg, #fff2ec 0%, #f5f3ff 100%);
+    border-right: 1px solid rgba(120, 120, 160, 0.15);
+}
+
+div[data-testid="stPlotlyChart"],
+div[data-testid="stPyplot"] {
+    background: rgba(255, 255, 255, 0.76);
+    padding: 18px;
+    border-radius: 24px;
+    box-shadow: 0 8px 26px rgba(80, 70, 120, 0.08);
+    border: 1px solid rgba(120, 120, 160, 0.15);
+}
+
+.katex-display {
+    background: rgba(255, 255, 255, 0.68);
+    border-radius: 18px;
+    padding: 14px 10px;
+    box-shadow: 0 6px 18px rgba(80, 70, 120, 0.05);
+}
+
+div[data-testid="stAlert"] {
+    border-radius: 18px;
+}
+
+hr {
+    border: none;
+    height: 1px;
+    background: linear-gradient(90deg, transparent, rgba(80, 70, 120, 0.28), transparent);
+}
+
+p, li {
+    font-size: 1.05rem;
+    line-height: 1.65;
+    color: #343044;
+}
+</style>
+""", unsafe_allow_html=True)
+
+# =============================
+# Title + Hero Section
+# =============================
+st.title("🎈 Hot-Air Balloon Buoyancy Simulator")
+
+st.markdown("""
+<div style="
+    background: rgba(255, 255, 255, 0.72);
+    padding: 28px 32px;
+    border-radius: 28px;
+    border: 1px solid rgba(120,120,160,0.18);
+    box-shadow: 0 12px 35px rgba(80,70,120,0.10);
+    margin-bottom: 28px;
+">
+    <h3 style="margin-top:0;">A calculus-powered design tool for buoyancy and hot-air balloon modeling</h3>
+    <p style="margin-bottom:0;">
+        Adjust temperature, passenger load, and material density to see how Archimedes’ principle
+        becomes an interactive engineering model.
+    </p>
+</div>
+""", unsafe_allow_html=True)
+
+# =============================
+# Force Balance Formulas
+# =============================
 st.markdown("### ⚖️ Force Balance")
+
+st.markdown(
+    "A hot-air balloon hovers when the upward buoyant force equals the total downward weight."
+)
 
 st.latex(r"""
 \rho_{\text{out}} gV
@@ -49,9 +164,10 @@ g = 9.81
 rho_out = P_atm / (R_specific * T_out)
 
 # =============================
-# Sidebar inputs
+# Sidebar Inputs
 # =============================
-st.sidebar.header("Input Parameters")
+st.sidebar.markdown("## 🎛️ Control Panel")
+st.sidebar.caption("Tune the physical parameters and watch the model update in real time.")
 
 n_people = st.sidebar.slider("Number of people", 1, 10, 4)
 mass_per_person = st.sidebar.slider("Mass per person (kg)", 40, 100, 70)
@@ -59,6 +175,9 @@ T_hot_C = st.sidebar.slider("Hot air temperature (°C)", 80, 120, 100)
 basket_mass = st.sidebar.slider("Basket + equipment mass (kg)", 100, 500, 250)
 material_density_g = st.sidebar.slider("Balloon material density (g/m²)", 20, 120, 64)
 
+# =============================
+# Derived Quantities
+# =============================
 T_hot_K = T_hot_C + 273.15
 rho_hot = P_atm / (R_specific * T_hot_K)
 eta = material_density_g / 1000
@@ -74,7 +193,12 @@ def surface_area(R):
     return 4 * np.pi * R**2
 
 def balance_equation(R):
-    return (rho_out - rho_hot) * volume(R) - eta * surface_area(R) - basket_mass - m_people
+    return (
+        (rho_out - rho_hot) * volume(R)
+        - eta * surface_area(R)
+        - basket_mass
+        - m_people
+    )
 
 try:
     R_min = brentq(balance_equation, 0.1, 50)
@@ -82,7 +206,7 @@ except Exception:
     R_min = None
 
 # =============================
-# Results
+# Top Metrics
 # =============================
 col1, col2, col3 = st.columns(3)
 
@@ -121,7 +245,6 @@ if R_min is not None:
 
     theta = np.linspace(0, 2 * np.pi, 80)
     phi = np.linspace(0, np.pi, 80)
-
     theta, phi = np.meshgrid(theta, phi)
 
     x = R_min * np.sin(phi) * np.cos(theta)
@@ -138,7 +261,7 @@ if R_min is not None:
             y=y,
             z=z,
             surfacecolor=pressure_proxy,
-            opacity=0.75,
+            opacity=0.76,
             colorscale="RdYlBu",
             showscale=True,
             colorbar=dict(title="Pressure proxy")
@@ -192,7 +315,8 @@ if R_min is not None:
             w=[R_min * 0.45],
             sizemode="absolute",
             sizeref=R_min * 0.6,
-            name="Buoyant force"
+            name="Buoyant force",
+            showscale=False
         )
     )
 
@@ -204,7 +328,7 @@ if R_min is not None:
             zaxis_title="z (m)",
             aspectmode="data"
         ),
-        margin=dict(l=0, r=0, b=0, t=30),
+        margin=dict(l=0, r=0, b=0, t=35),
         title="3D Model of the Required Hot-Air Balloon"
     )
 
@@ -213,13 +337,14 @@ if R_min is not None:
     st.markdown(
         "The color gradient represents a qualitative pressure proxy: lower points experience greater pressure, creating upward buoyant force."
     )
+
     # =============================
     # Column Integration Animation
     # =============================
     st.markdown("### 🧊 Column Integration Animation")
 
     st.markdown("""
-    This animation visualizes the core idea behind the double integral:
+    This animation visualizes the core idea behind the double integral.
 
     Instead of treating buoyancy as one mysterious upward force, we decompose the balloon into many vertical columns.  
     Each column contributes a small upward force because the pressure at the bottom is greater than the pressure at the top.
@@ -246,7 +371,6 @@ if R_min is not None:
     \right)
     """)
 
-    # Scale down radius for visualization so the plot stays readable
     R_vis = R_min
     num_columns = 11
 
@@ -268,14 +392,12 @@ if R_min is not None:
 
                 column_data.append((x0, y0, z_bottom, z_top, force_proxy))
 
-    # Sort columns so animation builds from center outward
     column_data.sort(key=lambda c: c[0]**2 + c[1]**2)
 
     frames = []
 
     for k in range(1, len(column_data) + 1):
         visible_columns = column_data[:k]
-
         frame_traces = []
 
         for x0, y0, z_bottom, z_top, force_proxy in visible_columns:
@@ -285,9 +407,7 @@ if R_min is not None:
                     y=[y0, y0],
                     z=[z_bottom, z_top],
                     mode="lines",
-                    line=dict(
-                        width=6,
-                    ),
+                    line=dict(width=6),
                     showlegend=False
                 )
             )
@@ -309,13 +429,8 @@ if R_min is not None:
 
         frames.append(go.Frame(data=frame_traces, name=str(k)))
 
-    # Initial empty frame
-    fig_col = go.Figure(
-        data=[],
-        frames=frames
-    )
+    fig_col = go.Figure(data=[], frames=frames)
 
-    # Add transparent sphere shell
     theta_c = np.linspace(0, 2 * np.pi, 60)
     phi_c = np.linspace(0, np.pi, 60)
     theta_c, phi_c = np.meshgrid(theta_c, phi_c)
@@ -398,8 +513,9 @@ if R_min is not None:
     =
     \rho_{\text{out}} gV
     """)
+
     # =============================
-    # Mass breakdown
+    # Mass Breakdown
     # =============================
     st.markdown("### 🧮 Mass Breakdown")
 
@@ -408,7 +524,7 @@ if R_min is not None:
     st.write(f"Balloon material mass: **{material_mass:.1f} kg**")
 
     # =============================
-    # Force balance
+    # Force Balance
     # =============================
     st.markdown("### ⚖️ Force Balance at Hovering")
 
@@ -427,7 +543,7 @@ if R_min is not None:
         st.success("The balloon is approximately in equilibrium.")
 
     # =============================
-    # Plot 1
+    # Plot 1: Net Lift vs Radius
     # =============================
     st.markdown("### 📈 Net Lift vs Radius")
 
@@ -445,13 +561,19 @@ if R_min is not None:
     ax.axhline(0, linestyle="--")
     ax.axvline(R_min, linestyle="--")
     ax.set_xlabel("Radius (m)")
-    ax.set_ylabel("Net lift (kg equivalent)")
+    ax.set_ylabel("Net lift capacity after payload (kg equivalent)")
+    ax.set_title("Net Lift vs Balloon Radius")
     st.pyplot(fig)
 
+    st.markdown("""
+    The balloon begins to hover at the point where the curve crosses zero.  
+    To the left of this point, it cannot lift the load. To the right, it has extra lifting capacity.
+    """)
+
     # =============================
-    # Plot 2
+    # Plot 2: Radius vs Temperature
     # =============================
-    st.markdown("### 🌡️ Radius vs Temperature")
+    st.markdown("### 🌡️ Required Radius vs Temperature")
 
     temps = np.linspace(80, 120, 40)
     radii = []
@@ -476,21 +598,33 @@ if R_min is not None:
     fig2, ax2 = plt.subplots()
     ax2.plot(temps, radii)
     ax2.scatter([T_hot_C], [R_min])
-    ax2.set_xlabel("Temperature (°C)")
-    ax2.set_ylabel("Radius (m)")
+    ax2.set_xlabel("Hot air temperature (°C)")
+    ax2.set_ylabel("Required radius (m)")
+    ax2.set_title("Required Radius vs Temperature")
     st.pyplot(fig2)
 
-    # =============================
-    # Insight
-    # =============================
-    st.markdown("### 🧠 Key Insight")
+    st.markdown("""
+    Higher temperature lowers the density of the hot air, increasing the density difference:
+    """)
 
-    st.latex(r"\text{Lift} \sim R^3")
+    st.latex(r"""
+    \rho_{\text{out}} - \rho_{\text{hot}}
+    """)
+
+    st.markdown("Therefore, the required balloon radius decreases.")
+
+    # =============================
+    # Key Insight
+    # =============================
+    st.markdown("### 🧠 Key Mathematical Insight")
+
+    st.latex(r"\text{Useful lift} \sim R^3")
     st.latex(r"\text{Material mass} \sim R^2")
 
-    st.markdown(
-        "Volume grows faster than surface area, which is why larger balloons are more efficient."
-    )
+    st.markdown("""
+    Volume grows faster than surface area.  
+    This is why larger balloons become more efficient: the useful lift increases cubically, while the fabric cost increases quadratically.
+    """)
 
 else:
-    st.error("No valid solution found.")
+    st.error("No valid solution found under the current parameters.")
