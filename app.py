@@ -213,7 +213,191 @@ if R_min is not None:
     st.markdown(
         "The color gradient represents a qualitative pressure proxy: lower points experience greater pressure, creating upward buoyant force."
     )
+    # =============================
+    # Column Integration Animation
+    # =============================
+    st.markdown("### 🧊 Column Integration Animation")
 
+    st.markdown("""
+    This animation visualizes the core idea behind the double integral:
+
+    Instead of treating buoyancy as one mysterious upward force, we decompose the balloon into many vertical columns.  
+    Each column contributes a small upward force because the pressure at the bottom is greater than the pressure at the top.
+    """)
+
+    st.latex(r"""
+    F_z
+    =
+    \iint_D
+    \left[
+    P_{\text{bottom}}(x,y)
+    -
+    P_{\text{top}}(x,y)
+    \right]
+    dA
+    """)
+
+    st.latex(r"""
+    P_{\text{bottom}} - P_{\text{top}}
+    =
+    \rho_{\text{out}} g
+    \left(
+    z_{\text{top}} - z_{\text{bottom}}
+    \right)
+    """)
+
+    # Scale down radius for visualization so the plot stays readable
+    R_vis = R_min
+    num_columns = 11
+
+    xs = np.linspace(-R_vis, R_vis, num_columns)
+    ys = np.linspace(-R_vis, R_vis, num_columns)
+
+    column_data = []
+
+    for x0 in xs:
+        for y0 in ys:
+            if x0**2 + y0**2 <= R_vis**2:
+                h = np.sqrt(R_vis**2 - x0**2 - y0**2)
+
+                z_bottom = R_vis + 2 - h
+                z_top = R_vis + 2 + h
+
+                column_height = z_top - z_bottom
+                force_proxy = column_height
+
+                column_data.append((x0, y0, z_bottom, z_top, force_proxy))
+
+    # Sort columns so animation builds from center outward
+    column_data.sort(key=lambda c: c[0]**2 + c[1]**2)
+
+    frames = []
+
+    for k in range(1, len(column_data) + 1):
+        visible_columns = column_data[:k]
+
+        frame_traces = []
+
+        for x0, y0, z_bottom, z_top, force_proxy in visible_columns:
+            frame_traces.append(
+                go.Scatter3d(
+                    x=[x0, x0],
+                    y=[y0, y0],
+                    z=[z_bottom, z_top],
+                    mode="lines",
+                    line=dict(
+                        width=6,
+                    ),
+                    showlegend=False
+                )
+            )
+
+            frame_traces.append(
+                go.Cone(
+                    x=[x0],
+                    y=[y0],
+                    z=[z_top],
+                    u=[0],
+                    v=[0],
+                    w=[force_proxy * 0.15],
+                    sizemode="absolute",
+                    sizeref=R_vis * 0.25,
+                    showscale=False,
+                    showlegend=False
+                )
+            )
+
+        frames.append(go.Frame(data=frame_traces, name=str(k)))
+
+    # Initial empty frame
+    fig_col = go.Figure(
+        data=[],
+        frames=frames
+    )
+
+    # Add transparent sphere shell
+    theta_c = np.linspace(0, 2 * np.pi, 60)
+    phi_c = np.linspace(0, np.pi, 60)
+    theta_c, phi_c = np.meshgrid(theta_c, phi_c)
+
+    x_s = R_vis * np.sin(phi_c) * np.cos(theta_c)
+    y_s = R_vis * np.sin(phi_c) * np.sin(theta_c)
+    z_s = R_vis * np.cos(phi_c) + R_vis + 2
+
+    fig_col.add_trace(
+        go.Surface(
+            x=x_s,
+            y=y_s,
+            z=z_s,
+            opacity=0.18,
+            colorscale="Blues",
+            showscale=False,
+            name="Balloon shell"
+        )
+    )
+
+    fig_col.update_layout(
+        height=700,
+        scene=dict(
+            xaxis_title="x",
+            yaxis_title="y",
+            zaxis_title="z",
+            aspectmode="data"
+        ),
+        title="Column Integral Interpretation of Buoyancy",
+        updatemenus=[
+            dict(
+                type="buttons",
+                showactive=False,
+                buttons=[
+                    dict(
+                        label="▶ Play",
+                        method="animate",
+                        args=[
+                            None,
+                            dict(
+                                frame=dict(duration=120, redraw=True),
+                                transition=dict(duration=0),
+                                fromcurrent=True
+                            )
+                        ],
+                    ),
+                    dict(
+                        label="⏸ Pause",
+                        method="animate",
+                        args=[
+                            [None],
+                            dict(
+                                frame=dict(duration=0, redraw=False),
+                                mode="immediate",
+                                transition=dict(duration=0)
+                            )
+                        ],
+                    ),
+                ],
+            )
+        ],
+        margin=dict(l=0, r=0, b=0, t=40)
+    )
+
+    st.plotly_chart(fig_col, use_container_width=True)
+
+    st.markdown("""
+    **Interpretation:**  
+    Each vertical column represents one small area element in the projected disk.  
+    The taller the column, the larger the pressure difference between its bottom and top.  
+    Adding all column contributions gives the total buoyant force.
+    """)
+
+    st.latex(r"""
+    F_z
+    =
+    \iiint_W
+    \rho_{\text{out}} g
+    \, dV
+    =
+    \rho_{\text{out}} gV
+    """)
     # =============================
     # Mass breakdown
     # =============================
